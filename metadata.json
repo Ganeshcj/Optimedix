@@ -1,0 +1,8 @@
+{
+  "name": "optimedix",
+  "description": "An AI-powered retinal disease screening platform for healthcare workers in India, providing automated detection of Diabetic Retinopathy, Glaucoma, and more.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
