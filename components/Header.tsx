@@ -15,7 +15,7 @@ const Header: React.FC<HeaderProps> = ({ user, lang, onLangToggle, onLogout }) =
   const t = TRANSLATIONS[lang];
 
   return (
-    <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+    <header className="bg-white shadow-sm border-b sticky top-0 z-50 no-print">
       <div className="gov-gradient h-1.5 w-full"></div>
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -23,7 +23,7 @@ const Header: React.FC<HeaderProps> = ({ user, lang, onLangToggle, onLogout }) =
             <Eye className="text-white w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold ashoka-blue leading-tight">{t.title}</h1>
+            <h1 className="text-xl font-bold ashoka-blue leading-tight uppercase tracking-tighter">Optimedix</h1>
             <p className="text-[10px] md:text-xs text-gray-500 font-medium uppercase tracking-wider">{t.tagline}</p>
           </div>
         </div>

@@ -1,157 +1,131 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { TRANSLATIONS } from '../constants';
-import { User, Role } from '../types';
-import { UserPlus, Building, MapPin, Shield, CheckCircle } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Role, User } from '../types';
+import { Shield, UserPlus, Stethoscope, Users, UserCog, Building } from 'lucide-react';
 
 interface SignupProps {
   onSignup: (user: User) => void;
   lang: 'EN' | 'HI';
 }
 
-const Signup: React.FC<SignupProps> = ({ onSignup, lang }) => {
-  const t = TRANSLATIONS[lang];
+const Signup: React.FC<SignupProps> = ({ onSignup }) => {
+  const [activeTab, setActiveTab] = useState<Role>('NURSE');
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     mobile: '',
-    role: 'NURSE' as Role,
+    email: '',
+    password: '',
     clinic: '',
     district: '',
-    state: '',
-    consent: false
+    specialization: ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.consent) return;
-    
-    onSignup({
-      id: Math.random().toString(),
+    const newUser: User = {
+      id: Math.random().toString(36).substr(2, 9),
       name: formData.name,
       mobile: formData.mobile,
-      email: `${formData.name.toLowerCase().replace(/\s/g, '')}@health.gov.in`,
-      role: formData.role,
+      email: formData.email,
+      role: activeTab,
       clinicName: formData.clinic,
       district: formData.district,
-      state: formData.state
-    });
+      specialization: formData.specialization
+    };
+    
+    // In a real app, we'd save to DB. Here we use localStorage.
+    const users = JSON.parse(localStorage.getItem('opti_users') || '[]');
+    localStorage.setItem('opti_users', JSON.stringify([...users, newUser]));
+    
+    onSignup(newUser);
+    navigate('/dashboard');
   };
+
+  const tabs: { id: Role, icon: any, label: string }[] = [
+    { id: 'NURSE', icon: Users, label: 'Nurse' },
+    { id: 'DOCTOR', icon: Stethoscope, label: 'Doctor' },
+    { id: 'PATIENT', icon: Users, label: 'Patient' },
+    { id: 'ADMIN', icon: UserCog, label: 'Admin' }
+  ];
 
   return (
     <div className="max-w-2xl mx-auto mt-6 px-4">
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-        <div className="bg-ashoka-blue py-6 px-8 text-white">
-          <h2 className="text-2xl font-bold flex items-center gap-3">
-            <UserPlus className="w-6 h-6" />
-            NHM Personnel Registration
-          </h2>
-          <p className="text-blue-100 text-sm mt-1">Register for National Retinal Health Screening Program</p>
+      <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
+        <div className="bg-ashoka-blue p-8 text-white text-center">
+          <Shield className="w-12 h-12 mx-auto mb-4 opacity-80" />
+          <h2 className="text-3xl font-black">Join Optimedix</h2>
+          <p className="text-blue-100 text-sm mt-2">Select your role to register on the platform</p>
+        </div>
+
+        <div className="flex border-b">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 py-4 flex flex-col items-center gap-1 transition-all border-b-4 ${activeTab === tab.id ? 'border-ashoka-blue bg-blue-50 text-ashoka-blue' : 'border-transparent text-gray-400 hover:bg-gray-50'}`}
+            >
+              <tab.icon className="w-5 h-5" />
+              <span className="text-[10px] font-black uppercase tracking-widest">{tab.label}</span>
+            </button>
+          ))}
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                <Shield className="w-3 h-3" />
-                Personal Details
-              </h3>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">{t.fullName}</label>
-                <input 
-                  type="text" required
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
-                />
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Full Name</label>
+                <input required type="text" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-ashoka-blue outline-none" 
+                  value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">{t.mobile}</label>
-                <input 
-                  type="tel" required
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.mobile}
-                  onChange={e => setFormData({...formData, mobile: e.target.value})}
-                />
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Mobile Number</label>
+                <input required type="tel" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-ashoka-blue outline-none" 
+                  value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">{t.role}</label>
-                <select 
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                  value={formData.role}
-                  onChange={e => setFormData({...formData, role: e.target.value as Role})}
-                >
-                  <option value="NURSE">Nurse / Health Worker</option>
-                  <option value="DOCTOR">Doctor / Specialist</option>
-                  <option value="ADMIN">Clinic Administrator</option>
-                </select>
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Email Address</label>
+                <input required type="email" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-ashoka-blue outline-none" 
+                  value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
               </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                <Building className="w-3 h-3" />
-                Clinic Information
-              </h3>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">{t.clinic}</label>
-                <input 
-                  type="text" required
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.clinic}
-                  onChange={e => setFormData({...formData, clinic: e.target.value})}
-                />
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Password</label>
+                <input required type="password" placeholder="••••••••" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-ashoka-blue outline-none" 
+                  value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              {activeTab !== 'PATIENT' && (
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">{t.district}</label>
-                  <input 
-                    type="text" required
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={formData.district}
-                    onChange={e => setFormData({...formData, district: e.target.value})}
-                  />
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Facility / Clinic Name</label>
+                  <input required type="text" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-ashoka-blue outline-none" 
+                    value={formData.clinic} onChange={e => setFormData({...formData, clinic: e.target.value})} />
                 </div>
+              )}
+              {activeTab === 'DOCTOR' && (
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">{t.state}</label>
-                  <input 
-                    type="text" required
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={formData.state}
-                    onChange={e => setFormData({...formData, state: e.target.value})}
-                  />
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Specialization</label>
+                  <input required type="text" placeholder="e.g. Vitreoretinal Surgeon" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-ashoka-blue outline-none" 
+                    value={formData.specialization} onChange={e => setFormData({...formData, specialization: e.target.value})} />
                 </div>
-              </div>
-              <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-dashed border-blue-200">
-                <p className="text-[10px] text-blue-700 font-medium">Please upload Government ID or Hospital ID for verification.</p>
-                <input type="file" className="mt-2 text-xs" />
+              )}
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">District</label>
+                <input required type="text" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-ashoka-blue outline-none" 
+                  value={formData.district} onChange={e => setFormData({...formData, district: e.target.value})} />
               </div>
             </div>
           </div>
 
-          <div className="pt-4 border-t">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input 
-                type="checkbox" required
-                className="mt-1 w-4 h-4 text-blue-600 rounded"
-                checked={formData.consent}
-                onChange={e => setFormData({...formData, consent: e.target.checked})}
-              />
-              <span className="text-xs text-gray-600 leading-relaxed">
-                I hereby declare that I am an authorized medical professional. I agree to abide by the <strong>National Digital Health Mission (NDHM)</strong> guidelines regarding patient privacy and data protection.
-              </span>
-            </label>
-          </div>
-
-          <button 
-            type="submit"
-            className="w-full bg-ashoka-blue text-white py-3.5 rounded-xl font-bold text-lg hover:bg-blue-900 shadow-lg active:scale-[0.98] transition-all"
-          >
-            Create Authorized Account
+          <button type="submit" className="w-full bg-ashoka-blue text-white py-4 rounded-2xl font-black text-lg hover:bg-blue-900 shadow-xl transition-all flex items-center justify-center gap-3">
+            <UserPlus className="w-6 h-6" /> Create {activeTab} Account
           </button>
-
+          
           <p className="text-center text-gray-500 text-sm">
-            Already have an account? <Link to="/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
+            Already registered? <Link to="/login" className="text-ashoka-blue font-black hover:underline">Sign In here</Link>
           </p>
         </form>
       </div>

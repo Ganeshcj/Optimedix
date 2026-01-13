@@ -1,171 +1,243 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { TRANSLATIONS } from '../constants';
-import { User, Patient, ScreeningResult } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { User, Patient, ScreeningResult, Role, Prescription } from '../types';
 import { 
-  Users, Activity, ClipboardList, TrendingUp, Plus, 
-  ChevronRight, Calendar, AlertCircle, Eye, CheckCircle2
+  Users, Activity, ClipboardList, Plus, 
+  ChevronRight, Calendar, AlertCircle, Eye, 
+  Stethoscope, ShieldCheck, Download, FileText, Settings
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 interface DashboardProps {
   lang: 'EN' | 'HI';
   user: User;
-  patients: Patient[];
-  results: ScreeningResult[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ lang, user, patients, results }) => {
-  const t = TRANSLATIONS[lang];
+const Dashboard: React.FC<DashboardProps> = ({ user }) => {
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [results, setResults] = useState<ScreeningResult[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const navigate = useNavigate();
 
-  const stats = [
-    { title: t.patientsScreened, value: results.length || '0', icon: Users, color: 'bg-blue-500' },
-    { title: t.positiveCases, value: results.filter(r => r.disease !== 'Normal').length || '0', icon: AlertCircle, color: 'bg-orange-500' },
-    { title: t.referrals, value: results.filter(r => r.riskScore > 70).length || '0', icon: Activity, color: 'bg-green-500' },
-    { title: 'Goal Status', value: '78%', icon: CheckCircle2, color: 'bg-purple-500' },
-  ];
+  useEffect(() => {
+    // Load data from local persistence
+    setPatients(JSON.parse(localStorage.getItem('opti_patients') || '[]'));
+    setResults(JSON.parse(localStorage.getItem('opti_results') || '[]'));
+    setPrescriptions(JSON.parse(localStorage.getItem('opti_prescriptions') || '[]'));
+  }, []);
 
-  const chartData = [
-    { name: 'Mon', count: 12 },
-    { name: 'Tue', count: 18 },
-    { name: 'Wed', count: 15 },
-    { name: 'Thu', count: 24 },
-    { name: 'Fri', count: 20 },
-    { name: 'Sat', count: 10 },
-  ];
-
-  return (
+  const NurseView = () => (
     <div className="space-y-8">
-      {/* Welcome Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Namaste, {user.name}</h2>
-          <p className="text-gray-500 text-sm">Monitoring retinal health at {user.clinicName}, {user.district}</p>
+          <h2 className="text-3xl font-black text-gray-800 tracking-tight">Nurse Portal</h2>
+          <p className="text-gray-500 font-medium">Managing screening workflow at {user.clinicName}</p>
         </div>
-        <Link 
-          to="/register-patient"
-          className="bg-ashoka-blue text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-900 shadow-lg active:scale-95 transition-all"
-        >
-          <Plus className="w-5 h-5" />
-          {t.registerPatient}
+        <Link to="/register-patient" className="bg-ashoka-blue text-white px-8 py-4 rounded-2xl font-black flex items-center gap-3 shadow-xl hover:scale-105 transition-all">
+          <Plus className="w-6 h-6" /> Register New Patient
         </Link>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((s, idx) => (
-          <div key={idx} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-            <div className={`${s.color} p-3 rounded-xl text-white`}>
-              <s.icon className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{s.title}</p>
-              <p className="text-2xl font-bold text-gray-800">{s.value}</p>
-            </div>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+          <Users className="w-8 h-8 text-blue-600 mb-4" />
+          <p className="text-xs font-black text-gray-400 uppercase mb-1">Total Screenings</p>
+          <p className="text-4xl font-black text-gray-800">{results.length}</p>
+        </div>
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+          <AlertCircle className="w-8 h-8 text-orange-600 mb-4" />
+          <p className="text-xs font-black text-gray-400 uppercase mb-1">Pending Referrals</p>
+          <p className="text-4xl font-black text-gray-800">{results.filter(r => r.status === 'REFERRED').length}</p>
+        </div>
+        <div className="bg-ashoka-blue p-6 rounded-3xl shadow-xl text-white">
+          <ShieldCheck className="w-8 h-8 mb-4 opacity-80" />
+          <p className="text-xs font-bold opacity-70 uppercase mb-1">System Status</p>
+          <p className="text-xl font-bold">AI Engine Active</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Recent Patients & Activity */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Chart Card */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-blue-500" />
-                Screening Trends
-              </h3>
-              <select className="text-sm border rounded-lg px-2 py-1 outline-none">
-                <option>Weekly</option>
-                <option>Monthly</option>
-              </select>
-            </div>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{fill: '#f1f5f9'}} />
-                  <Bar dataKey="count" fill="#000080" radius={[4, 4, 0, 0]} barSize={40} />
-                </BarChart>
-              </ResponsiveContainer>
+      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b flex justify-between items-center bg-gray-50/50">
+          <h3 className="font-black text-gray-800 uppercase tracking-widest text-xs">Recently Screened Patients</h3>
+        </div>
+        <div className="divide-y">
+          {results.length === 0 ? (
+            <div className="p-20 text-center text-gray-400 font-bold uppercase text-xs">No records found</div>
+          ) : (
+            results.map(r => {
+              const p = patients.find(pat => pat.id === r.patientId);
+              return (
+                <div key={r.id} className="p-6 flex items-center justify-between hover:bg-blue-50/30 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-700 font-black">{p?.name.charAt(0)}</div>
+                    <div>
+                      <p className="font-black text-gray-800 text-lg">{p?.name || 'Unknown Patient'}</p>
+                      <p className="text-xs font-bold text-gray-400">ID: #{r.id.slice(0,5)} • Status: <span className={r.status === 'REFERRED' ? 'text-orange-600' : 'text-green-600'}>{r.status}</span></p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => navigate(`/report/${r.id}`)} className="px-4 py-2 border-2 border-ashoka-blue text-ashoka-blue rounded-xl font-black text-xs hover:bg-ashoka-blue hover:text-white transition-all">VIEW AI REPORT</button>
+                    <button onClick={() => navigate(`/screen/${p?.id}`)} className="px-4 py-2 bg-ashoka-blue text-white rounded-xl font-black text-xs shadow-lg shadow-blue-100">RE-SCREEN</button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const DoctorView = () => (
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-black text-gray-800 tracking-tight">Doctor Review Portal</h2>
+          <p className="text-gray-500 font-medium">Vitreoretinal Specialist: {user.name}</p>
+        </div>
+        <div className="flex gap-4">
+          <button className="bg-white border-2 border-gray-100 px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-gray-50">
+            <Calendar className="w-5 h-5 text-blue-600" /> Appointments
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b bg-orange-50/50 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-orange-600" />
+          <h3 className="font-black text-orange-900 uppercase tracking-widest text-xs">Cases Referred for Urgent Review</h3>
+        </div>
+        <div className="divide-y">
+          {results.filter(r => r.status === 'REFERRED').length === 0 ? (
+            <div className="p-20 text-center text-gray-400 font-bold uppercase text-xs">No pending referrals</div>
+          ) : (
+            results.filter(r => r.status === 'REFERRED').map(r => {
+              const p = patients.find(pat => pat.id === r.patientId);
+              return (
+                <div key={r.id} className="p-6 flex items-center justify-between hover:bg-orange-50/20">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-700 font-black">{p?.name.charAt(0)}</div>
+                    <div>
+                      <p className="font-black text-gray-800 text-lg">{p?.name}</p>
+                      <p className="text-xs font-bold text-gray-400">Diagnosis: {r.leftEye?.disease} / {r.rightEye?.disease}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => navigate(`/report/${r.id}`)} className="bg-orange-600 text-white px-6 py-3 rounded-xl font-black text-xs shadow-lg shadow-orange-100 flex items-center gap-2">
+                    <Stethoscope className="w-4 h-4" /> REVIEW CASE
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const PatientView = () => {
+    const myResults = results.filter(r => r.patientId === user.id);
+    const myPrescriptions = prescriptions.filter(p => p.patientId === user.id);
+    
+    return (
+      <div className="space-y-8">
+        <div>
+          <h2 className="text-3xl font-black text-gray-800 tracking-tight">Patient Health Record</h2>
+          <p className="text-gray-500 font-medium">Welcome back, {user.name}</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+            <h3 className="font-black text-gray-800 text-xl mb-6 flex items-center gap-3">
+              <Eye className="w-6 h-6 text-blue-600" /> My Screening History
+            </h3>
+            <div className="space-y-4">
+              {myResults.length === 0 ? (
+                <p className="text-gray-400 text-sm font-bold italic">No screening results found.</p>
+              ) : (
+                myResults.map(r => (
+                  <div key={r.id} className="p-4 bg-gray-50 rounded-2xl border flex items-center justify-between">
+                    <div>
+                      <p className="font-black text-gray-800">{new Date(r.date).toLocaleDateString()}</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Retinal Scan #R-{r.id.slice(0,5)}</p>
+                    </div>
+                    <button onClick={() => navigate(`/report/${r.id}`)} className="text-ashoka-blue font-black text-xs hover:underline">VIEW REPORT</button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
-          {/* Recent Patients */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b flex items-center justify-between">
-              <h3 className="font-bold text-gray-800">Recent Patients</h3>
-              <button className="text-blue-600 text-sm font-bold hover:underline">View All</button>
-            </div>
-            <div className="divide-y">
-              {patients.length === 0 ? (
-                <div className="p-10 text-center text-gray-400">
-                  <ClipboardList className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                  <p>No patients registered yet</p>
-                </div>
+          <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+            <h3 className="font-black text-gray-800 text-xl mb-6 flex items-center gap-3">
+              <FileText className="w-6 h-6 text-green-600" /> Digital Prescriptions
+            </h3>
+            <div className="space-y-4">
+              {myPrescriptions.length === 0 ? (
+                <p className="text-gray-400 text-sm font-bold italic">No prescriptions found.</p>
               ) : (
-                patients.slice(0, 5).map(p => (
-                  <div key={p.id} className="p-4 hover:bg-gray-50 flex items-center justify-between transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold">
-                        {p.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-800">{p.name}</p>
-                        <p className="text-xs text-gray-500">{p.age}y • {p.gender} • {p.phone}</p>
-                      </div>
+                myPrescriptions.map(p => (
+                  <div key={p.id} className="p-4 bg-green-50/30 border border-green-100 rounded-2xl flex items-center justify-between">
+                    <div>
+                      <p className="font-black text-gray-800">{p.diagnosis}</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">DR. REVIEW DATE: {new Date(p.date).toLocaleDateString()}</p>
                     </div>
-                    <Link 
-                      to={`/screen/${p.id}`}
-                      className="p-2 bg-gray-100 rounded-lg hover:bg-ashoka-blue hover:text-white transition-all"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </Link>
+                    <button className="bg-green-600 text-white p-2 rounded-lg"><Download className="w-4 h-4" /></button>
                   </div>
                 ))
               )}
             </div>
           </div>
         </div>
+      </div>
+    );
+  };
 
-        {/* Right Column: Quick Stats & Logs */}
-        <div className="space-y-8">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-orange-500" />
-              Clinic Schedule
-            </h3>
-            <div className="space-y-4">
-              <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
-                <p className="text-xs font-bold text-blue-800">UPCOMING CAMP</p>
-                <p className="text-sm font-semibold text-blue-900 mt-1">Village Screening - Paladi</p>
-                <p className="text-[10px] text-blue-600 mt-0.5">Tomorrow, 09:00 AM</p>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                <p className="text-xs font-bold text-gray-500">STAFF MEETING</p>
-                <p className="text-sm font-semibold text-gray-800 mt-1">Diagnosis Review</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">24 Nov, 04:00 PM</p>
-              </div>
-            </div>
-          </div>
+  const AdminView = () => (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-3xl font-black text-gray-800 tracking-tight">Administrator Panel</h2>
+        <p className="text-gray-500 font-medium">Optimedix Network Statistics</p>
+      </div>
 
-          <div className="bg-ashoka-blue p-6 rounded-2xl shadow-lg text-white">
-            <h3 className="font-bold mb-4">Ayushman Bharat Tips</h3>
-            <ul className="space-y-3 text-xs opacity-90 leading-relaxed list-disc pl-4">
-              <li>Ensure retinal cameras are cleaned before every session.</li>
-              <li>Always check patient blood sugar for better DR assessment.</li>
-              <li>High-risk patients must be referred immediately via AB-HWC portal.</li>
-            </ul>
-            <button className="mt-6 w-full py-2 bg-white/10 hover:bg-white/20 rounded-lg font-bold text-xs transition-all border border-white/20">
-              Download Guidelines
-            </button>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          { label: 'Active Nurses', value: '24', icon: Users, color: 'bg-blue-600' },
+          { label: 'Board Doctors', value: '8', icon: Stethoscope, color: 'bg-indigo-600' },
+          { label: 'Positive Flags', value: '142', icon: AlertCircle, color: 'bg-red-600' },
+          { label: 'Referral Rate', value: '89%', icon: Activity, color: 'bg-green-600' }
+        ].map((stat, i) => (
+          <div key={i} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+            <stat.icon className={`w-8 h-8 ${stat.color} text-white p-2 rounded-xl mb-4`} />
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">{stat.label}</p>
+            <p className="text-3xl font-black text-gray-800">{stat.value}</p>
           </div>
+        ))}
+      </div>
+
+      <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+        <h3 className="font-black text-gray-800 text-xl mb-6 flex items-center gap-3">
+          <Settings className="w-6 h-6 text-gray-400" /> Platform Management
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button className="p-6 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-gray-50 transition-all text-left">
+            <p className="font-black text-gray-800">Approve New Clinicians</p>
+            <p className="text-xs text-gray-400 mt-1">12 pending requests for verification</p>
+          </button>
+          <button className="p-6 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-gray-50 transition-all text-left">
+            <p className="font-black text-gray-800">System Logs & Audits</p>
+            <p className="text-xs text-gray-400 mt-1">View all data access records</p>
+          </button>
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="pb-20">
+      {user.role === 'NURSE' && <NurseView />}
+      {user.role === 'DOCTOR' && <DoctorView />}
+      {user.role === 'PATIENT' && <PatientView />}
+      {user.role === 'ADMIN' && <AdminView />}
     </div>
   );
 };

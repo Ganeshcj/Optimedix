@@ -1,7 +1,7 @@
 
 export const TRANSLATIONS = {
   EN: {
-    title: "Netra AI",
+    title: "Optimedix",
     tagline: "Smart Retinal Health Screening",
     login: "Login",
     signup: "Sign Up",
@@ -24,7 +24,7 @@ export const TRANSLATIONS = {
     referrals: "Referrals Sent",
   },
   HI: {
-    title: "नेत्रा एआई",
+    title: "ऑप्टिमेडिक्स",
     tagline: "स्मार्ट रेटिनल स्वास्थ्य स्क्रीनिंग",
     login: "लॉगिन",
     signup: "साइन अप",

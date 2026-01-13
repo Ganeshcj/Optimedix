@@ -1,18 +1,20 @@
 
 import React, { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { analyzeRetinalImage } from '../services/gemini';
-import { ScreeningResult, DiseaseType, Severity } from '../types';
-import { Camera, Upload, Eye, Zap, Loader2, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
+import { analyzeRetinalImages } from '../services/gemini';
+import { ScreeningResult, EyeAnalysis, DiseaseType, Severity, User } from '../types';
+import { Camera, Zap, Loader2, ArrowRight, ShieldCheck, RefreshCw } from 'lucide-react';
 
 interface ScreeningViewProps {
   lang: 'EN' | 'HI';
   onResult: (r: ScreeningResult) => void;
 }
 
-const ScreeningView: React.FC<ScreeningViewProps> = ({ lang, onResult }) => {
+const ScreeningView: React.FC<ScreeningViewProps> = ({ onResult }) => {
   const { patientId } = useParams();
   const navigate = useNavigate();
+  const nurse: User = JSON.parse(localStorage.getItem('optimedix_user') || '{}');
+  
   const [images, setImages] = useState<{left?: string, right?: string}>({});
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<Partial<ScreeningResult> | null>(null);
@@ -34,172 +36,93 @@ const ScreeningView: React.FC<ScreeningViewProps> = ({ lang, onResult }) => {
     if (!images.left && !images.right) return;
     setAnalyzing(true);
     try {
-      // Use the left eye image for analysis if available
-      const data = await analyzeRetinalImage(images.left || images.right || '', patientId!);
-      const finalResult = {
-        ...data,
-        leftEyeImage: images.left,
-        rightEyeImage: images.right
-      } as ScreeningResult;
-      setResult(finalResult);
-      onResult(finalResult);
+      const data = await analyzeRetinalImages(images.left, images.right, patientId!, nurse.id);
+      setResult(data);
+      if (data.id) {
+         onResult(data as ScreeningResult);
+      }
     } catch (error) {
       console.error(error);
+      alert('AI Analysis failed. Please check your network and try again.');
     } finally {
       setAnalyzing(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-800">Retinal Image Capture</h2>
-        <div className="flex gap-2">
-          <span className={`px-3 py-1 rounded-full text-xs font-bold ${images.left ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>Left Eye {images.left ? '✓' : ''}</span>
-          <span className={`px-3 py-1 rounded-full text-xs font-bold ${images.right ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>Right Eye {images.right ? '✓' : ''}</span>
+    <div className="max-w-6xl mx-auto space-y-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-gray-800 tracking-tight">Retinal Analysis Center</h2>
+          <p className="text-gray-500 font-medium">Bilateral Imaging Protocol • NHM Guidelines</p>
+        </div>
+        <div className="flex bg-white p-2 rounded-2xl border shadow-sm">
+          <button onClick={() => setActiveEye('left')} className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${activeEye === 'left' ? 'bg-ashoka-blue text-white' : 'text-gray-400'}`}>LEFT EYE (OS)</button>
+          <button onClick={() => setActiveEye('right')} className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${activeEye === 'right' ? 'bg-ashoka-blue text-white' : 'text-gray-400'}`}>RIGHT EYE (OD)</button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Image Capture Sections */}
-        {(['left', 'right'] as const).map(eye => (
-          <div 
-            key={eye}
-            onClick={() => setActiveEye(eye)}
-            className={`relative aspect-square rounded-3xl border-4 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center
-              ${activeEye === eye ? 'border-blue-500 bg-blue-50 shadow-inner' : 'border-dashed border-gray-200 bg-gray-50 hover:bg-gray-100'}
-            `}
-          >
-            {images[eye] ? (
-              <>
-                <img src={images[eye]} alt={`${eye} eye`} className="w-full h-full object-cover" />
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setImages(prev => ({...prev, [eye]: undefined})); }}
-                  className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600"
-                >
-                  <Zap className="w-4 h-4" />
-                </button>
-              </>
-            ) : (
-              <div className="text-center p-6 space-y-4">
-                <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border flex items-center justify-center mx-auto text-gray-400">
-                  <Camera className="w-8 h-8" />
-                </div>
-                <div>
-                  <p className="font-bold text-gray-700 uppercase tracking-widest text-sm">{eye} Eye</p>
-                  <p className="text-xs text-gray-400 mt-1">Tap to capture or upload fundus image</p>
-                </div>
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-white px-4 py-2 rounded-lg border shadow-sm text-sm font-bold text-gray-600 hover:bg-gray-50"
-                >
-                  Upload Image
-                </button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        <div className={`relative aspect-square rounded-[3rem] border-4 overflow-hidden transition-all shadow-2xl ${images[activeEye] ? 'border-ashoka-blue' : 'border-dashed border-gray-200 bg-gray-50/50'}`}>
+           {images[activeEye] ? (
+             <>
+               <img src={images[activeEye]} className="w-full h-full object-cover" />
+               <button onClick={() => setImages({...images, [activeEye]: undefined})} className="absolute top-6 right-6 p-3 bg-red-600 text-white rounded-2xl shadow-xl hover:scale-110 transition-all"><RefreshCw className="w-5 h-5" /></button>
+             </>
+           ) : (
+             <div className="flex flex-col items-center justify-center h-full p-10 text-center">
+               <div className="w-20 h-20 bg-white rounded-3xl shadow-lg flex items-center justify-center text-gray-400 mb-6">
+                 <Camera className="w-10 h-10" />
+               </div>
+               <h4 className="font-black text-gray-700 text-xl uppercase tracking-widest">{activeEye} Eye</h4>
+               <p className="text-sm text-gray-400 mt-2 max-w-[200px]">Capture high-resolution fundus image using integrated camera</p>
+               <button onClick={() => fileInputRef.current?.click()} className="mt-8 bg-ashoka-blue text-white px-8 py-4 rounded-2xl font-black text-sm shadow-xl shadow-blue-100 hover:scale-105 transition-all">UPLOAD SCAN</button>
+             </div>
+           )}
+           <div className="absolute bottom-6 left-6 px-4 py-2 bg-black/60 backdrop-blur-md rounded-xl text-[10px] font-black text-white uppercase tracking-widest">
+             {activeEye === 'left' ? 'Ocular Sinister' : 'Ocular Dexter'}
+           </div>
+        </div>
+
+        <div className="flex flex-col justify-center space-y-8">
+           <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-100 space-y-6">
+              <h3 className="font-black text-gray-800 text-xl">Analysis Command</h3>
+              <p className="text-sm text-gray-500 leading-relaxed italic">"Our AI engine scans for early markers of Microaneurysms, Hemorrhages, and Excudates in the foveal and peripheral regions."</p>
+              <div className="flex gap-4">
+                 <div className={`flex-1 p-4 rounded-2xl border flex flex-col items-center gap-1 ${images.left ? 'bg-green-50 border-green-100 text-green-700' : 'bg-gray-50 border-gray-100 text-gray-300'}`}>
+                    <span className="text-[10px] font-black uppercase">Left Scan</span>
+                    <ShieldCheck className="w-5 h-5" />
+                 </div>
+                 <div className={`flex-1 p-4 rounded-2xl border flex flex-col items-center gap-1 ${images.right ? 'bg-green-50 border-green-100 text-green-700' : 'bg-gray-50 border-gray-100 text-gray-300'}`}>
+                    <span className="text-[10px] font-black uppercase">Right Scan</span>
+                    <ShieldCheck className="w-5 h-5" />
+                 </div>
               </div>
-            )}
-            <div className={`absolute bottom-4 left-4 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${activeEye === eye ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
-              {eye === 'left' ? 'OS (Left)' : 'OD (Right)'}
-            </div>
-          </div>
-        ))}
+              <button 
+                disabled={analyzing || (!images.left && !images.right)}
+                onClick={handleStartAnalysis}
+                className={`w-full py-5 rounded-3xl font-black text-lg flex items-center justify-center gap-4 shadow-2xl transition-all
+                  ${analyzing ? 'bg-gray-100 text-gray-300 cursor-wait' : 'bg-ashoka-blue text-white hover:bg-blue-900 active:scale-95'}
+                `}
+              >
+                {analyzing ? <><Loader2 className="w-6 h-6 animate-spin" /> RUNNING BILATERAL AI...</> : <><Zap className="w-6 h-6 fill-current" /> START ANALYSIS</>}
+              </button>
+           </div>
+           
+           {result && (
+             <div className="animate-in fade-in slide-in-from-right duration-500 bg-green-600 p-8 rounded-[2.5rem] text-white shadow-2xl">
+               <div className="flex justify-between items-center mb-4">
+                 <h4 className="font-black uppercase tracking-widest text-xs">Analysis Complete</h4>
+                 <ShieldCheck className="w-6 h-6" />
+               </div>
+               <p className="text-xl font-bold leading-tight">Patient data has been prioritized. Detailed diagnostic report is now available.</p>
+               <button onClick={() => navigate(`/report/${result.id}`)} className="mt-6 w-full bg-white text-green-700 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg flex items-center justify-center gap-2">VIEW FINDINGS <ArrowRight className="w-4 h-4" /></button>
+             </div>
+           )}
+        </div>
       </div>
 
       <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileUpload} />
-
-      {/* AI Control & Results */}
-      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-        {!result ? (
-          <div className="p-8 text-center space-y-6">
-            <p className="text-gray-500 max-w-sm mx-auto">Upload at least one retinal image to start the automated AI health assessment.</p>
-            <button 
-              disabled={analyzing || (!images.left && !images.right)}
-              onClick={handleStartAnalysis}
-              className={`w-full md:w-auto px-12 py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all shadow-xl
-                ${analyzing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-ashoka-blue text-white hover:bg-blue-900 active:scale-95'}
-                ${(!images.left && !images.right) ? 'opacity-50 grayscale' : ''}
-              `}
-            >
-              {analyzing ? (
-                <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  Running AI Models...
-                </>
-              ) : (
-                <>
-                  <Zap className="w-6 h-6 fill-current" />
-                  Start AI Screening
-                </>
-              )}
-            </button>
-            {analyzing && (
-              <p className="text-xs text-blue-600 font-bold animate-pulse">Detecting lesions, hemorrhages, and nerve health...</p>
-            )}
-          </div>
-        ) : (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className={`p-8 ${result.disease === 'Normal' ? 'bg-green-50' : 'bg-red-50'} flex flex-col md:flex-row gap-8 items-start`}>
-              <div className="flex-1 space-y-4">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">AI Diagnosis</h3>
-                  <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5
-                    ${result.severity === Severity.LOW ? 'bg-green-100 text-green-700' : 
-                      result.severity === Severity.MEDIUM ? 'bg-orange-100 text-orange-700' : 
-                      'bg-red-100 text-red-700'}
-                  `}>
-                    {result.severity} Risk
-                  </div>
-                </div>
-                <h4 className={`text-4xl font-black ${result.disease === 'Normal' ? 'text-green-700' : 'text-red-700'}`}>
-                  {result.disease}
-                </h4>
-                <p className="text-gray-600 leading-relaxed font-medium">
-                  {result.abnormalities}
-                </p>
-                <div className="flex gap-6 pt-4">
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Risk Score</p>
-                    <p className="text-2xl font-black text-gray-800">{result.riskScore}%</p>
-                  </div>
-                  <div className="w-px h-10 bg-gray-200"></div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Confidence</p>
-                    <p className="text-2xl font-black text-gray-800">{result.confidenceScore}%</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="w-full md:w-64 space-y-3">
-                <button 
-                  onClick={() => navigate(`/report/${result.id}`)}
-                  className="w-full py-3 bg-ashoka-blue text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-900 shadow-md transition-all"
-                >
-                  <ArrowRight className="w-5 h-5" />
-                  Full Report
-                </button>
-                <button className="w-full py-3 bg-white border-2 border-orange-500 text-orange-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-orange-50 transition-all">
-                  <AlertTriangle className="w-5 h-5" />
-                  Referral Slip
-                </button>
-              </div>
-            </div>
-            
-            <div className="p-8 bg-white border-t space-y-6">
-              <h5 className="font-bold text-gray-800">Highlighted Regions of Interest</h5>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[1,2,3,4].map(i => (
-                  <div key={i} className="aspect-square bg-gray-100 rounded-xl overflow-hidden relative group cursor-zoom-in">
-                    <img src={images.left || images.right} className="w-full h-full object-cover grayscale opacity-50 group-hover:opacity-100 transition-all" alt="ROI" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-12 h-12 border-2 border-red-500 rounded-full animate-pulse"></div>
-                    </div>
-                    <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[8px] px-1.5 py-0.5 rounded font-bold uppercase">ROI #{i}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 };

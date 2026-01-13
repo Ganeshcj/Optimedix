@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Netra AI – Smart Retinal Health Screening</title>
+    <title>Optimedix – Smart Retinal Health Screening</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -20,6 +20,20 @@
         }
         .bg-ashoka-blue {
             background-color: #000080;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            body {
+                background-color: white !important;
+            }
+        }
+        .print-only {
+            display: none;
         }
     </style>
 <script type="importmap">
